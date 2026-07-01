@@ -583,28 +583,33 @@ impl Transaction {
     }
 
     fn commit_single(&mut self) -> Result<()> {
+        // Acquire the commit lock *before* conflict detection. Previously we
+        // validated conflicts and only then took `commit_mu`, which is a classic
+        // TOCTOU race: another transaction can commit between the check and the
+        // lock, making our snapshot stale while we still write. Concurrent model-
+        // based tests (insert/update/delete across threads) flaked with "Missing
+        // from DB" / "Extra in DB" for exactly this reason.
+        let _commit_guard = self.commit_mu.lock()
+            .map_err(|_| Error::LockPoisoned { lock_name: "transaction.commit_mu".to_string() })?;
+
         if let Some(db) = &self.db {
             let modified = self.modified_collections.read()
                 .map_err(|_| Error::LockPoisoned { lock_name: "transaction.modified_collections".to_string() })?;
 
             for collection_name in modified.iter() {
+                // Re-read roots under the lock so we observe every commit that
+                // finished before we entered the critical section.
                 let current_metadata = db.get_metadata();
                 let current_root = current_metadata.collections
                     .get(collection_name)
                     .map(|c| c.btree_root)
                     .unwrap_or(0);
 
-                // Always check for write conflicts, even if root hasn't changed
-                // (documents can be modified without changing the tree structure)
                 self.detect_write_conflicts(collection_name, current_root)?;
             }
         }
 
-        // Now acquire commit lock AFTER conflict detection
-        let _commit_guard = self.commit_mu.lock()
-            .map_err(|_| Error::LockPoisoned { lock_name: "transaction.commit_mu".to_string() })?;
-
-        // Conflict detection passed! Now write to WAL and pager.
+        // Conflict detection passed under the commit lock. Write to WAL and pager.
         // Snapshot the writes to release the lock quickly
         let writes_snapshot: Vec<(PageNum, Vec<u8>)> = {
             let writes = self.writes.read()
