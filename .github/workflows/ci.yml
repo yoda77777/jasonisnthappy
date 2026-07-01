@@ -29,5 +29,5 @@ jobs:
           cargo test --test test_detailed_race_logging
       - name: Build examples (also use rand)
         run: cargo build --examples
-      - name: Stress module tests
-        run: cargo test --test stress
+      - name: Stress module tests (uses rand 0.9)
+        run: cargo test --test stress_tests -- --test-threads=1
