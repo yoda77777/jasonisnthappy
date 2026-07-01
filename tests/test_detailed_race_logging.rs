@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 struct Operation {
@@ -39,10 +39,10 @@ fn test_with_detailed_logging() {
                 let op_log = Arc::clone(&op_log);
 
                 thread::spawn(move || {
-                    let mut rng = thread_rng();
+                    let mut rng = rand::rng();
 
                     for i in 0..50 {
-                        let operation = rng.gen_range(0..3);
+                        let operation = rng.random_range(0..3);
 
                         match operation {
                             0 => {
@@ -120,8 +120,8 @@ fn test_with_detailed_logging() {
                                 };
 
                                 if !truth_docs.is_empty() {
-                                    let doc_id = truth_docs[rng.gen_range(0..truth_docs.len())].clone();
-                                    let updates = json!({"value": rng.gen_range(0..1000)});
+                                    let doc_id = truth_docs[rng.random_range(0..truth_docs.len())].clone();
+                                    let updates = json!({"value": rng.random_range(0..1000)});
 
                                     let mut tx = db.begin().unwrap();
                                     let mut collection = tx.collection("test").unwrap();
@@ -146,7 +146,7 @@ fn test_with_detailed_logging() {
                                 };
 
                                 if !truth_docs.is_empty() && i > 10 {
-                                    let doc_id = truth_docs[rng.gen_range(0..truth_docs.len())].clone();
+                                    let doc_id = truth_docs[rng.random_range(0..truth_docs.len())].clone();
 
                                     let timestamp_us = SystemTime::now()
                                         .duration_since(UNIX_EPOCH)

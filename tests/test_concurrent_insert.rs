@@ -151,12 +151,12 @@ fn test_concurrent_inserts_with_updates_deletes() {
         let final_state = final_state.clone();
 
         let handle = thread::spawn(move || {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let mut local_ids: Vec<String> = Vec::new();
             let mut local_final: HashSet<String> = HashSet::new();
 
             for _ in 0..ops_per_thread {
-                let roll: f64 = rand::Rng::gen(&mut rng);
+                let roll: f64 = rand::Rng::random(&mut rng);
 
                 if roll < 0.70 || local_ids.is_empty() {
                     // INSERT
@@ -181,7 +181,7 @@ fn test_concurrent_inserts_with_updates_deletes() {
                     }
                 } else if roll < 0.90 {
                     // UPDATE - pick random local doc
-                    if let Some(doc_id) = local_ids.get(rand::Rng::gen_range(&mut rng, 0..local_ids.len())) {
+                    if let Some(doc_id) = local_ids.get(rand::Rng::random_range(&mut rng, 0..local_ids.len())) {
                         let mut tx = db.begin().expect("begin failed");
                         let mut coll = tx.collection("test").expect("collection failed");
 
@@ -193,7 +193,7 @@ fn test_concurrent_inserts_with_updates_deletes() {
                     }
                 } else {
                     // DELETE - pick random local doc
-                    let idx = rand::Rng::gen_range(&mut rng, 0..local_ids.len());
+                    let idx = rand::Rng::random_range(&mut rng, 0..local_ids.len());
                     let doc_id = local_ids[idx].clone();
 
                     let mut tx = db.begin().expect("begin failed");
@@ -294,10 +294,10 @@ fn test_cross_thread_operations() {
         let shared_ids = shared_ids.clone();
 
         let handle = thread::spawn(move || {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
 
             for _ in 0..ops_per_thread {
-                let roll: f64 = rand::Rng::gen(&mut rng);
+                let roll: f64 = rand::Rng::random(&mut rng);
 
                 if roll < 0.60 {
                     // INSERT (60%)
@@ -328,7 +328,7 @@ fn test_cross_thread_operations() {
                             None
                         } else {
                             let vec: Vec<_> = ids.iter().cloned().collect();
-                            Some(vec[rand::Rng::gen_range(&mut rng, 0..vec.len())].clone())
+                            Some(vec[rand::Rng::random_range(&mut rng, 0..vec.len())].clone())
                         }
                     };
 
@@ -350,7 +350,7 @@ fn test_cross_thread_operations() {
                             None
                         } else {
                             let vec: Vec<_> = ids.iter().cloned().collect();
-                            Some(vec[rand::Rng::gen_range(&mut rng, 0..vec.len())].clone())
+                            Some(vec[rand::Rng::random_range(&mut rng, 0..vec.len())].clone())
                         }
                     };
 

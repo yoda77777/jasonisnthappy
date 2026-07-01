@@ -36,7 +36,7 @@ web-ui = ["tiny_http"]
 
 [dev-dependencies]
 tempfile = "3.8"
-rand = "0.8"
+rand = "0.9"
 
 [profile.release]
 # Optimize for size

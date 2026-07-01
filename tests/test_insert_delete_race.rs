@@ -6,7 +6,7 @@ use serde_json::json;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tempfile::TempDir;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 #[test]
 fn test_insert_delete_concurrent_same_docs() {
@@ -34,10 +34,10 @@ fn test_insert_delete_concurrent_same_docs() {
                 let truth = Arc::clone(&truth);
 
                 thread::spawn(move || {
-                    let mut rng = thread_rng();
+                    let mut rng = rand::rng();
 
                     for i in 0..50 {
-                        let op = rng.gen_range(0..2);
+                        let op = rng.random_range(0..2);
 
                         match op {
                             0 => {
@@ -61,7 +61,7 @@ fn test_insert_delete_concurrent_same_docs() {
                                 };
 
                                 if !truth_snapshot.is_empty() && i > 5 {
-                                    let doc_id = &truth_snapshot[rng.gen_range(0..truth_snapshot.len())];
+                                    let doc_id = &truth_snapshot[rng.random_range(0..truth_snapshot.len())];
 
                                     let mut tx = db.begin().unwrap();
                                     let mut collection = tx.collection("test").unwrap();
@@ -147,10 +147,10 @@ fn test_insert_update_delete_pattern() {
                 let truth = Arc::clone(&truth);
 
                 thread::spawn(move || {
-                    let mut rng = thread_rng();
+                    let mut rng = rand::rng();
 
                     for i in 0..OPS_PER_WORKER {
-                        let operation = rng.gen_range(0..3);
+                        let operation = rng.random_range(0..3);
 
                         match operation {
                             0 => {
@@ -160,7 +160,7 @@ fn test_insert_update_delete_pattern() {
                                     "_id": doc_id.clone(),
                                     "worker": worker_id,
                                     "iteration": i,
-                                    "value": rng.gen_range(0..1000),
+                                    "value": rng.random_range(0..1000),
                                 });
 
                                 let mut tx = db.begin().unwrap();
@@ -179,8 +179,8 @@ fn test_insert_update_delete_pattern() {
                                 };
 
                                 if !truth_docs.is_empty() {
-                                    let doc_id = &truth_docs[rng.gen_range(0..truth_docs.len())];
-                                    let updates = json!({"value": rng.gen_range(0..1000)});
+                                    let doc_id = &truth_docs[rng.random_range(0..truth_docs.len())];
+                                    let updates = json!({"value": rng.random_range(0..1000)});
 
                                     let mut tx = db.begin().unwrap();
                                     let mut collection = tx.collection("concurrent_test").unwrap();
@@ -205,7 +205,7 @@ fn test_insert_update_delete_pattern() {
                                 };
 
                                 if !truth_docs.is_empty() && i > 10 {
-                                    let doc_id = truth_docs[rng.gen_range(0..truth_docs.len())].clone();
+                                    let doc_id = truth_docs[rng.random_range(0..truth_docs.len())].clone();
 
                                     let mut tx = db.begin().unwrap();
                                     let mut collection = tx.collection("concurrent_test").unwrap();
