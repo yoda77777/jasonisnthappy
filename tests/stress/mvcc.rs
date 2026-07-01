@@ -145,12 +145,12 @@ fn test_lru_cache_eviction() {
         tx.commit().unwrap();
     }
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let access_count = 10000;
     let mut hits = 0;
 
     for _i in 0..access_count {
-        let doc_id = format!("doc_{}", rng.gen_range(0..5000));
+        let doc_id = format!("doc_{}", rng.random_range(0..5000));
 
         let mut tx = db.begin().unwrap();
         let coll = tx.collection("cache_test").unwrap();

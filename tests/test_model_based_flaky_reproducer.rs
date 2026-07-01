@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tempfile::TempDir;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 struct TruthModel {
@@ -129,11 +129,11 @@ fn test_reproduce_flaky_concurrent() {
                 let operations_log = Arc::clone(&operations_log);
 
                 thread::spawn(move || {
-                    let mut rng = thread_rng();
+                    let mut rng = rand::rng();
                     let collection_name = "concurrent_test";
 
                     for i in 0..OPS_PER_WORKER {
-                        let operation = rng.gen_range(0..3);
+                        let operation = rng.random_range(0..3);
 
                         match operation {
                             0 => {
@@ -143,7 +143,7 @@ fn test_reproduce_flaky_concurrent() {
                                     "_id": doc_id.clone(),
                                     "worker": worker_id,
                                     "iteration": i,
-                                    "value": rng.gen_range(0..1000),
+                                    "value": rng.random_range(0..1000),
                                 });
 
                                 let mut tx = db.begin().unwrap();
@@ -176,10 +176,10 @@ fn test_reproduce_flaky_concurrent() {
                                 };
 
                                 if !truth_docs.is_empty() {
-                                    let random_doc = &truth_docs[rng.gen_range(0..truth_docs.len())];
+                                    let random_doc = &truth_docs[rng.random_range(0..truth_docs.len())];
                                     if let Some(doc_id_str) = random_doc.get("_id").and_then(|v| v.as_str()) {
                                         let doc_id = doc_id_str.to_string();
-                                        let updates = json!({"value": rng.gen_range(0..1000)});
+                                        let updates = json!({"value": rng.random_range(0..1000)});
 
                                         let mut tx = db.begin().unwrap();
                                         let mut collection = tx.collection(collection_name).unwrap();
@@ -199,7 +199,7 @@ fn test_reproduce_flaky_concurrent() {
                                 };
 
                                 if !truth_docs.is_empty() && i > 10 {
-                                    let random_doc = &truth_docs[rng.gen_range(0..truth_docs.len())];
+                                    let random_doc = &truth_docs[rng.random_range(0..truth_docs.len())];
                                     if let Some(doc_id_str) = random_doc.get("_id").and_then(|v| v.as_str()) {
                                         let doc_id = doc_id_str.to_string();
 

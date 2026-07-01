@@ -35,12 +35,12 @@ fn test_query_parser_fuzzing() {
 }
 
 fn test_random_binary_garbage() -> usize {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut count = 0;
 
     for i in 0..1000 {
         let length = 1 + (i % 1000);
-        let garbage: Vec<u8> = (0..length).map(|_| rng.gen()).collect();
+        let garbage: Vec<u8> = (0..length).map(|_| rng.random()).collect();
 
         let query = String::from_utf8_lossy(&garbage);
         test_parse_no_fail(&query, "random binary garbage");

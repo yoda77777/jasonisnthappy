@@ -17,8 +17,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use rand::{thread_rng, Rng, seq::SliceRandom};
-use rand::distributions::Alphanumeric;
+use rand::{Rng, seq::IndexedRandom};
+use rand::distr::{Alphanumeric, SampleString};
 
 // ============================================================================
 // CONFIGURATION
@@ -120,7 +120,7 @@ impl GroundTruth {
             if ids.is_empty() {
                 None
             } else {
-                let mut rng = thread_rng();
+                let mut rng = rand::rng();
                 Some(ids.choose(&mut rng).unwrap().to_string())
             }
         })
@@ -140,24 +140,20 @@ impl GroundTruth {
 // ============================================================================
 
 fn generate_random_string(len: usize) -> String {
-    thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(len)
-        .map(char::from)
-        .collect()
+    Alphanumeric.sample_string(&mut rand::rng(), len)
 }
 
 fn pick<'a>(choices: &[&'a str]) -> &'a str {
-    choices[thread_rng().gen_range(0..choices.len())]
+    choices[rand::rng().random_range(0..choices.len())]
 }
 
 fn generate_user_doc(id: &str, size_class: &str) -> Value {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let bio_size = match size_class {
-        "small" => rng.gen_range(10..500),
-        "medium" => rng.gen_range(5_000..50_000),
-        "large" => rng.gen_range(500_000..2_000_000),
+        "small" => rng.random_range(10..500),
+        "medium" => rng.random_range(5_000..50_000),
+        "large" => rng.random_range(500_000..2_000_000),
         _ => 100,
     };
 
@@ -172,32 +168,32 @@ fn generate_user_doc(id: &str, size_class: &str) -> Value {
             "first": generate_random_string(8),
             "last": generate_random_string(12),
         },
-        "age": rng.gen_range(18..80),
+        "age": rng.random_range(18..80),
         "created_at": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         "preferences": {
             "theme": theme,
             "language": language,
-            "notifications": rng.gen_bool(0.7),
+            "notifications": rng.random_bool(0.7),
         },
         "bio": generate_random_string(bio_size),
-        "tags": (0..rng.gen_range(1..10)).map(|_| generate_random_string(8)).collect::<Vec<_>>(),
+        "tags": (0..rng.random_range(1..10)).map(|_| generate_random_string(8)).collect::<Vec<_>>(),
     })
 }
 
 fn generate_product_doc(id: &str, size_class: &str) -> Value {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let description_size = match size_class {
-        "small" => rng.gen_range(50..500),
-        "medium" => rng.gen_range(10_000..100_000),
-        "large" => rng.gen_range(500_000..2_500_000),
+        "small" => rng.random_range(50..500),
+        "medium" => rng.random_range(10_000..100_000),
+        "large" => rng.random_range(500_000..2_500_000),
         _ => 200,
     };
 
     let num_images = match size_class {
-        "small" => rng.gen_range(1..3),
-        "medium" => rng.gen_range(5..20),
-        "large" => rng.gen_range(20..50),
+        "small" => rng.random_range(1..3),
+        "medium" => rng.random_range(5..20),
+        "large" => rng.random_range(20..50),
         _ => 2,
     };
 
@@ -209,32 +205,32 @@ fn generate_product_doc(id: &str, size_class: &str) -> Value {
         "type": "product",
         "sku": format!("SKU-{}", generate_random_string(10)),
         "name": generate_random_string(20),
-        "price": rng.gen_range(1.0..10000.0_f64),
+        "price": rng.random_range(1.0..10000.0_f64),
         "currency": currency,
         "category": category,
-        "in_stock": rng.gen_bool(0.8),
-        "quantity": rng.gen_range(0..1000),
+        "in_stock": rng.random_bool(0.8),
+        "quantity": rng.random_range(0..1000),
         "description": generate_random_string(description_size),
         "images": (0..num_images).map(|i| json!({
             "url": format!("https://cdn.example.com/products/{}/{}.jpg", id, i),
             "alt": generate_random_string(20),
-            "width": thread_rng().gen_range(100..4000),
-            "height": thread_rng().gen_range(100..4000),
+            "width": rand::rng().random_range(100..4000),
+            "height": rand::rng().random_range(100..4000),
         })).collect::<Vec<_>>(),
         "ratings": {
-            "average": rng.gen_range(1.0..5.0_f64),
-            "count": rng.gen_range(0..10000),
+            "average": rng.random_range(1.0..5.0_f64),
+            "count": rng.random_range(0..10000),
         },
     })
 }
 
 fn generate_order_doc(id: &str, size_class: &str) -> Value {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let num_items = match size_class {
-        "small" => rng.gen_range(1..5),
-        "medium" => rng.gen_range(10..100),
-        "large" => rng.gen_range(500..2000),
+        "small" => rng.random_range(1..5),
+        "medium" => rng.random_range(10..100),
+        "large" => rng.random_range(500..2000),
         _ => 3,
     };
 
@@ -245,23 +241,23 @@ fn generate_order_doc(id: &str, size_class: &str) -> Value {
     json!({
         "_id": id,
         "type": "order",
-        "user_id": format!("user_{}", rng.gen_range(1..100000)),
+        "user_id": format!("user_{}", rng.random_range(1..100000)),
         "status": status,
         "created_at": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         "shipping_address": {
-            "street": format!("{} {} St", rng.gen_range(1..9999), generate_random_string(10)),
+            "street": format!("{} {} St", rng.random_range(1..9999), generate_random_string(10)),
             "city": generate_random_string(12),
             "state": generate_random_string(2).to_uppercase(),
-            "zip": format!("{:05}", rng.gen_range(10000..99999)),
+            "zip": format!("{:05}", rng.random_range(10000..99999)),
             "country": "US",
         },
         "items": (0..num_items).map(|_| json!({
-            "product_id": format!("prod_{}", thread_rng().gen_range(1..50000)),
-            "quantity": thread_rng().gen_range(1..10),
-            "price": thread_rng().gen_range(1.0..500.0_f64),
+            "product_id": format!("prod_{}", rand::rng().random_range(1..50000)),
+            "quantity": rand::rng().random_range(1..10),
+            "price": rand::rng().random_range(1.0..500.0_f64),
             "name": generate_random_string(15),
         })).collect::<Vec<_>>(),
-        "total": rng.gen_range(10.0..5000.0_f64),
+        "total": rng.random_range(10.0..5000.0_f64),
         "payment": {
             "method": payment_method,
             "status": payment_status,
@@ -270,12 +266,12 @@ fn generate_order_doc(id: &str, size_class: &str) -> Value {
 }
 
 fn generate_event_doc(id: &str, size_class: &str) -> Value {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let payload_size = match size_class {
-        "small" => rng.gen_range(50..500),
-        "medium" => rng.gen_range(5_000..50_000),
-        "large" => rng.gen_range(500_000..3_000_000),
+        "small" => rng.random_range(50..500),
+        "medium" => rng.random_range(5_000..50_000),
+        "large" => rng.random_range(500_000..3_000_000),
         _ => 100,
     };
 
@@ -290,7 +286,7 @@ fn generate_event_doc(id: &str, size_class: &str) -> Value {
         "type": "event",
         "event_type": event_type,
         "timestamp": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
-        "user_id": format!("user_{}", rng.gen_range(1..100000)),
+        "user_id": format!("user_{}", rng.random_range(1..100000)),
         "session_id": generate_random_string(32),
         "device": {
             "type": device_type,
@@ -300,19 +296,19 @@ fn generate_event_doc(id: &str, size_class: &str) -> Value {
         "location": {
             "country": country,
             "city": generate_random_string(10),
-            "ip": format!("{}.{}.{}.{}", rng.gen_range(1..255), rng.gen_range(0..255), rng.gen_range(0..255), rng.gen_range(0..255)),
+            "ip": format!("{}.{}.{}.{}", rng.random_range(1..255), rng.random_range(0..255), rng.random_range(0..255), rng.random_range(0..255)),
         },
         "payload": generate_random_string(payload_size),
     })
 }
 
 fn generate_analytics_doc(id: &str, size_class: &str) -> Value {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let num_data_points = match size_class {
-        "small" => rng.gen_range(10..100),
-        "medium" => rng.gen_range(500..5000),
-        "large" => rng.gen_range(10000..50000),
+        "small" => rng.random_range(10..100),
+        "medium" => rng.random_range(500..5000),
+        "large" => rng.random_range(10000..50000),
         _ => 50,
     };
 
@@ -330,21 +326,21 @@ fn generate_analytics_doc(id: &str, size_class: &str) -> Value {
         "aggregation": aggregation,
         "data_points": (0..num_data_points).map(|i| json!({
             "timestamp": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - (i * 3600),
-            "value": thread_rng().gen_range(0.0..10000.0_f64),
-            "count": thread_rng().gen_range(0..100000),
+            "value": rand::rng().random_range(0.0..10000.0_f64),
+            "count": rand::rng().random_range(0..100000),
         })).collect::<Vec<_>>(),
         "summary": {
-            "total": rng.gen_range(0.0..1000000.0_f64),
-            "average": rng.gen_range(0.0..10000.0_f64),
-            "min": rng.gen_range(0.0..100.0_f64),
-            "max": rng.gen_range(100.0..100000.0_f64),
+            "total": rng.random_range(0.0..1000000.0_f64),
+            "average": rng.random_range(0.0..10000.0_f64),
+            "min": rng.random_range(0.0..100.0_f64),
+            "max": rng.random_range(100.0..100000.0_f64),
         },
     })
 }
 
 fn generate_document(collection: &str, id: &str) -> Value {
-    let mut rng = thread_rng();
-    let roll: f64 = rng.gen();
+    let mut rng = rand::rng();
+    let roll: f64 = rng.random();
 
     let size_class = if roll < SMALL_DOC_CHANCE {
         "small"
@@ -365,10 +361,10 @@ fn generate_document(collection: &str, id: &str) -> Value {
 }
 
 fn generate_update() -> Value {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     json!({
         "updated_at": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-        "update_note": generate_random_string(rng.gen_range(10..100)),
+        "update_note": generate_random_string(rng.random_range(10..100)),
     })
 }
 
@@ -661,14 +657,14 @@ fn writer_thread(
     stop_flag: Arc<AtomicBool>,
     doc_counter: Arc<AtomicU64>,
 ) {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     while !stop_flag.load(Ordering::Relaxed) {
         // Check if we should pause for verification
         stats.check_pause();
 
-        let collection = COLLECTIONS[rng.gen_range(0..COLLECTIONS.len())];
-        let roll: f64 = rng.gen();
+        let collection = COLLECTIONS[rng.random_range(0..COLLECTIONS.len())];
+        let roll: f64 = rng.random();
 
         if roll < INSERT_CHANCE {
             // INSERT
@@ -843,7 +839,7 @@ fn writer_thread(
         }
 
         // Small sleep to avoid overwhelming
-        thread::sleep(Duration::from_micros(rng.gen_range(100..1000)));
+        thread::sleep(Duration::from_micros(rng.random_range(100..1000)));
     }
 }
 
@@ -854,16 +850,16 @@ fn reader_thread(
     stats: Arc<Stats>,
     stop_flag: Arc<AtomicBool>,
 ) {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     while !stop_flag.load(Ordering::Relaxed) {
         // Check if we should pause for verification
         stats.check_pause();
 
-        let collection = COLLECTIONS[rng.gen_range(0..COLLECTIONS.len())];
+        let collection = COLLECTIONS[rng.random_range(0..COLLECTIONS.len())];
 
         // Random read pattern: either point read or small range
-        if rng.gen_bool(0.7) {
+        if rng.random_bool(0.7) {
             // Point read
             let maybe_id = {
                 let truth = truth.read().unwrap();
@@ -896,7 +892,7 @@ fn reader_thread(
             }
         }
 
-        thread::sleep(Duration::from_millis(rng.gen_range(10..100)));
+        thread::sleep(Duration::from_millis(rng.random_range(10..100)));
     }
 }
 

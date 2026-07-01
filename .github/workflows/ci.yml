@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Library tests
+        run: cargo test --lib
+      - name: Integration tests (rand 0.9 call sites)
+        run: |
+          set -euo pipefail
+          cargo test --test model_based
+          cargo test --test conflict_detection
+          cargo test --test query_fuzzing
+          cargo test --test test_concurrent_insert
+          cargo test --test test_insert_delete_race
+          cargo test --test test_model_based_flaky_reproducer
+          cargo test --test test_detailed_race_logging
+      - name: Build examples (also use rand)
+        run: cargo build --examples
+      - name: Stress module tests
+        run: cargo test --test stress

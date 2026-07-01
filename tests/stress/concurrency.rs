@@ -703,7 +703,7 @@ fn run_combined_worker(db_path: &str, process_id: usize) {
         let db = Arc::clone(&db);
 
         let handle = thread::spawn(move || {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             use rand::Rng;
 
             for op_id in 0..OPS_PER_THREAD {
@@ -722,7 +722,7 @@ fn run_combined_worker(db_path: &str, process_id: usize) {
                     "process": process_id,
                     "thread": thread_id,
                     "op": op_id,
-                    "value": rng.gen_range(0..1000),
+                    "value": rng.random_range(0..1000),
                 });
 
                 let _ = collection.insert(doc);

@@ -3,7 +3,7 @@ use jasonisnthappy::core::database::Database;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use tempfile::TempDir;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 struct TruthModel {
@@ -171,7 +171,7 @@ fn test_model_based_correctness() {
 
     let db = Database::open(db_path.to_str().unwrap()).unwrap();
     let mut truth = TruthModel::new();
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     const OPERATIONS: usize = 1000;
     let mut insert_count = 0;
@@ -183,7 +183,7 @@ fn test_model_based_correctness() {
     println!("Running {} random operations with model-based verification...", OPERATIONS);
 
     for i in 0..OPERATIONS {
-        let operation = rng.gen_range(0..4);
+        let operation = rng.random_range(0..4);
         let collection_name = "test_collection";
 
         match operation {
@@ -193,7 +193,7 @@ fn test_model_based_correctness() {
                     "_id": doc_id,
                     "type": "test",
                     "iteration": i,
-                    "value": rng.gen_range(0..1000),
+                    "value": rng.random_range(0..1000),
                     "timestamp": std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap()
@@ -218,14 +218,14 @@ fn test_model_based_correctness() {
             1 => {
                 let all_docs = truth.find_all(collection_name);
                 if !all_docs.is_empty() {
-                    let random_doc = &all_docs[rng.gen_range(0..all_docs.len())];
+                    let random_doc = &all_docs[rng.random_range(0..all_docs.len())];
                     if let Some(doc_id) = random_doc.get("_id").and_then(|v| v.as_str()) {
                         let updates = json!({
                             "updated_at": std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
                                 .unwrap()
                                 .as_secs(),
-                            "value": rng.gen_range(0..1000),
+                            "value": rng.random_range(0..1000),
                         });
 
                         let mut tx = db.begin().unwrap();
@@ -248,7 +248,7 @@ fn test_model_based_correctness() {
             2 => {
                 let all_docs = truth.find_all(collection_name);
                 if !all_docs.is_empty() {
-                    let random_doc = &all_docs[rng.gen_range(0..all_docs.len())];
+                    let random_doc = &all_docs[rng.random_range(0..all_docs.len())];
                     if let Some(doc_id) = random_doc.get("_id").and_then(|v| v.as_str()) {
                         let mut tx = db.begin().unwrap();
                         let mut collection = tx.collection(collection_name).unwrap();
@@ -331,7 +331,7 @@ fn test_model_based_with_crash() {
     let db_path_str = db_path.to_str().unwrap();
 
     let mut truth = TruthModel::new();
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     const CRASH_INTERVAL: usize = 100;
     const TOTAL_OPERATIONS: usize = 500;
@@ -351,7 +351,7 @@ fn test_model_based_with_crash() {
                 "_id": doc_id,
                 "round": round,
                 "iter": i,
-                "value": rng.gen_range(0..1000),
+                "value": rng.random_range(0..1000),
             });
 
             match collection.insert(doc.clone()) {
@@ -421,11 +421,11 @@ fn test_model_based_concurrent() {
             let truth = Arc::clone(&truth);
 
             thread::spawn(move || {
-                let mut rng = thread_rng();
+                let mut rng = rand::rng();
                 let collection_name = "concurrent_test";
 
                 for i in 0..OPS_PER_WORKER {
-                    let operation = rng.gen_range(0..3);
+                    let operation = rng.random_range(0..3);
 
                     match operation {
                         0 => {
@@ -434,7 +434,7 @@ fn test_model_based_concurrent() {
                                 "_id": doc_id.clone(),
                                 "worker": worker_id,
                                 "iteration": i,
-                                "value": rng.gen_range(0..1000),
+                                "value": rng.random_range(0..1000),
                             });
 
                             let mut tx = db.begin().unwrap();
@@ -453,11 +453,11 @@ fn test_model_based_concurrent() {
                             };
 
                             if !truth_docs.is_empty() {
-                                let random_doc = &truth_docs[rng.gen_range(0..truth_docs.len())];
+                                let random_doc = &truth_docs[rng.random_range(0..truth_docs.len())];
                                 if let Some(doc_id_str) = random_doc.get("_id").and_then(|v| v.as_str()) {
                                     let doc_id = doc_id_str.to_string();
                                     let updates = json!({
-                                        "value": rng.gen_range(0..1000),
+                                        "value": rng.random_range(0..1000),
                                     });
 
                                     let mut tx = db.begin().unwrap();
@@ -478,7 +478,7 @@ fn test_model_based_concurrent() {
                             };
 
                             if !truth_docs.is_empty() && i > 10 {
-                                let random_doc = &truth_docs[rng.gen_range(0..truth_docs.len())];
+                                let random_doc = &truth_docs[rng.random_range(0..truth_docs.len())];
                                 if let Some(doc_id_str) = random_doc.get("_id").and_then(|v| v.as_str()) {
                                     let doc_id = doc_id_str.to_string();
 
