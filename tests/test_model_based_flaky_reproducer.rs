@@ -1,5 +1,13 @@
-// Reproducer for the flaky test_model_based_concurrent failure
-// Goal: Run the test multiple times to reliably reproduce the "Missing from DB" issue
+// Regression stress for the flaky test_model_based_concurrent failure.
+//
+// Root cause (fixed in `Transaction::commit_single`): conflict detection ran
+// *before* acquiring `commit_mu`. Another transaction could commit in the
+// window between the check and the lock (TOCTOU), so we could write a stale
+// snapshot and diverge from the in-test truth model ("Missing from DB" /
+// "Extra in DB"). Conflict checks now run while holding `commit_mu`.
+//
+// This harness runs many concurrent insert/update/delete workers repeatedly
+// to prove the race stays closed (no sleep/retry/skip).
 
 use jasonisnthappy::core::database::Database;
 use serde_json::{json, Value};

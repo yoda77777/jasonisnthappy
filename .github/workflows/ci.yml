@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Unit + integration tests
+        run: cargo test --all-targets
+
+  # Prove the concurrent model-based suite is stable: run it many times
+  # across parallel jobs (root-cause fix for commit TOCTOU, not retries).
+  concurrent-stress:
+    name: concurrent-stress (shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build tests
+        run: cargo test --test model_based --test test_model_based_flaky_reproducer --test test_insert_delete_race --no-run
+      - name: Stress concurrent model-based (10× per shard)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 10); do
+            echo "=== shard ${{ matrix.shard }} iteration $i ==="
+            cargo test --test model_based test_model_based_concurrent -- --exact --nocapture
+            cargo test --test test_insert_delete_race -- --nocapture
+          done
+      - name: Flaky reproducer (50-run stress harness)
+        run: cargo test --test test_model_based_flaky_reproducer -- --nocapture
