@@ -16,7 +16,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Unit + integration tests
-        run: cargo test --all-targets
+        # Several integration tests use hard-coded /tmp/*.db paths and race when
+        # cargo runs them in parallel across the process. Serialize the suite so
+        # we do not false-fail unrelated tests while proving the concurrent fix.
+        run: cargo test --all-targets -- --test-threads=1
 
   # Prove the concurrent model-based suite is stable: run it many times
   # across parallel jobs (root-cause fix for commit TOCTOU, not retries).
